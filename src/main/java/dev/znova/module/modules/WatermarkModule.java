@@ -2,20 +2,28 @@ package dev.znova.module.modules;
 
 import dev.znova.module.Category;
 import dev.znova.module.Module;
+import dev.znova.module.setting.BooleanSetting;
 import dev.znova.util.ColorUtils;
 import dev.znova.util.RenderUtils;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.BlockPos;
 
-/** Top-left HUD badge: client name plus a live FPS readout. Enabled by default. */
+import java.util.ArrayList;
+import java.util.List;
+
+/** Top-left HUD badge: client name plus optional live FPS and coordinate readouts. */
 public final class WatermarkModule extends Module {
     private static final int PADDING = 9;
-    private static final int GAP = 12;
+    private static final int GAP = 10;
     private static final int HEIGHT = 18;
 
+    private final BooleanSetting showFps = addSetting(new BooleanSetting("Show FPS", true));
+    private final BooleanSetting showCoordinates = addSetting(new BooleanSetting("Show Coordinates", false));
+
     public WatermarkModule() {
-        super("Watermark", Category.RENDER, "Futuristic HUD badge with the client name and a live FPS counter.", true);
+        super("Watermark", Category.RENDER, "HUD badge with the client name, live FPS and your coordinates.", true);
     }
 
     @Override
@@ -26,13 +34,24 @@ public final class WatermarkModule extends Module {
 
         TextRenderer textRenderer = mc.textRenderer;
         String brand = "zNova";
-        String fps = mc.getCurrentFps() + " FPS";
 
-        int brandWidth = textRenderer.getWidth(brand);
-        int fpsWidth = textRenderer.getWidth(fps);
-        int width = PADDING + brandWidth + GAP + fpsWidth + PADDING + 3;
+        List<String> segments = new ArrayList<>();
+        if (this.showFps.getValue()) {
+            segments.add(mc.getCurrentFps() + " FPS");
+        }
+        if (this.showCoordinates.getValue()) {
+            BlockPos pos = mc.player.getBlockPos();
+            segments.add(pos.getX() + ", " + pos.getY() + ", " + pos.getZ());
+        }
+
+        int textWidth = textRenderer.getWidth(brand);
+        for (String segment : segments) {
+            textWidth += GAP + textRenderer.getWidth(segment);
+        }
+
         int x = 6;
         int y = 6;
+        int width = PADDING + textWidth + PADDING + 3;
 
         long time = Util.getMeasuringTimeMs();
         float pulse = 0.55F + 0.45F * (float) Math.sin(time / 520.0D);
@@ -46,10 +65,17 @@ public final class WatermarkModule extends Module {
 
         RenderUtils.text(context, textRenderer, brand, x + PADDING, y + 5.0F, 0xFFF2FBFF, false);
 
-        int dividerX = x + PADDING + brandWidth + GAP / 2;
-        context.fill(dividerX, y + 5, dividerX + 1, y + HEIGHT - 5, ColorUtils.rgba(0xFFFFFF, 45));
+        float cursor = x + PADDING + textRenderer.getWidth(brand);
+        if (!segments.isEmpty()) {
+            int dividerX = Math.round(cursor + GAP / 2.0F);
+            context.fill(dividerX, y + 5, dividerX + 1, y + HEIGHT - 5, ColorUtils.rgba(0xFFFFFF, 45));
+            cursor += GAP;
+        }
 
-        RenderUtils.text(context, textRenderer, fps, x + PADDING + brandWidth + GAP, y + 5.0F,
-                ColorUtils.rgba(ColorUtils.CYAN, 215), false);
+        for (String segment : segments) {
+            RenderUtils.text(context, textRenderer, segment, cursor, y + 5.0F,
+                    ColorUtils.rgba(ColorUtils.CYAN, 215), false);
+            cursor += textRenderer.getWidth(segment) + GAP;
+        }
     }
 }

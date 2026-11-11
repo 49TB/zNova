@@ -2,8 +2,10 @@ package dev.znova.module.modules;
 
 import dev.znova.module.Category;
 import dev.znova.module.Module;
+import dev.znova.module.setting.BooleanSetting;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.util.hit.BlockHitResult;
 
 /**
  * Holds the attack key for you while a pickaxe is in the main hand.
@@ -14,6 +16,8 @@ import net.minecraft.registry.tag.ItemTags;
  * pressed it, so a manually held attack key never gets cancelled when you switch tools.
  */
 public final class AutoMinerModule extends Module {
+    private final BooleanSetting onlyWhenLookingAtBlock = addSetting(new BooleanSetting("Only When Looking At Block", false));
+
     private boolean holdingAttack;
 
     public AutoMinerModule() {
@@ -23,12 +27,16 @@ public final class AutoMinerModule extends Module {
     @Override
     public void onTick() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || client.options == null) {
+        if (client.player == null) {
             release(client);
             return;
         }
 
+        boolean lookingAtBlock = !this.onlyWhenLookingAtBlock.getValue()
+                || client.crosshairTarget instanceof BlockHitResult;
+
         boolean shouldMine = client.currentScreen == null
+                && lookingAtBlock
                 && client.player.getMainHandStack().isIn(ItemTags.PICKAXES);
 
         if (shouldMine) {
@@ -55,9 +63,7 @@ public final class AutoMinerModule extends Module {
         if (!this.holdingAttack) {
             return;
         }
-        if (client.options != null) {
-            client.options.attackKey.setPressed(false);
-        }
+        client.options.attackKey.setPressed(false);
         this.holdingAttack = false;
     }
 }

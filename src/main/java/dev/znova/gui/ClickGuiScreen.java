@@ -1,5 +1,6 @@
 package dev.znova.gui;
 
+import dev.znova.ZNovaClient;
 import dev.znova.gui.widget.CategoryPanel;
 import dev.znova.module.Category;
 import dev.znova.module.Module;
@@ -21,8 +22,8 @@ import java.util.List;
  * zNova's ClickGUI: a blurred, dark glass overlay with three draggable category panels.
  * Opened and closed with Right Shift.
  * <p>
- * In 1.21.11 screen input is delivered through {@link Click} and {@link KeyInput} records
- * instead of raw doubles/key codes.
+ * Left click toggles a module, right click expands its settings card. While a module is
+ * waiting for a keybind the screen swallows the next key press: ESC or DELETE unbinds.
  */
 public final class ClickGuiScreen extends Screen {
     private final List<CategoryPanel> panels = new ArrayList<>();
@@ -42,7 +43,7 @@ public final class ClickGuiScreen extends Screen {
             Category[] categories = Category.values();
             int totalWidth = categories.length * CategoryPanel.WIDTH + (categories.length - 1) * CategoryPanel.GAP;
             int startX = Math.max(10, (this.width - totalWidth) / 2);
-            int startY = Math.max(56, (this.height - 220) / 2);
+            int startY = Math.max(56, (this.height - 230) / 2);
 
             for (int i = 0; i < categories.length; i++) {
                 CategoryPanel panel = new CategoryPanel(categories[i],
@@ -73,12 +74,12 @@ public final class ClickGuiScreen extends Screen {
         context.getMatrices().scale(0.97F + 0.03F * eased, 0.97F + 0.03F * eased);
         context.getMatrices().translate(-this.width / 2.0F, -this.height / 2.0F + (1.0F - eased) * 12.0F);
 
-        RenderUtils.glowTextScaled(context, textRenderer, "zNova", this.width / 2.0F, 16.0F, 2.0F,
+        RenderUtils.glowTextScaled(context, textRenderer, "zNova", this.width / 2.0F, 12.0F, 2.0F,
                 ColorUtils.rgba(ColorUtils.CYAN, 30), 0xFFF2FBFF);
 
         String subtitle = "UTILITY CLIENT";
         RenderUtils.spacedText(context, textRenderer, subtitle,
-                this.width / 2.0F - RenderUtils.spacedWidth(textRenderer, subtitle, 2) / 2.0F, 34.0F, 2,
+                this.width / 2.0F - RenderUtils.spacedWidth(textRenderer, subtitle, 2) / 2.0F, 30.0F, 2,
                 ColorUtils.rgba(ColorUtils.CYAN, 130), false);
 
         for (CategoryPanel panel : this.panels) {
@@ -95,16 +96,25 @@ public final class ClickGuiScreen extends Screen {
 
         String footer = hoveredModule != null
                 ? hoveredModule.getName() + "  -  " + hoveredModule.getDescription()
-                : "Right Shift closes the GUI  -  drag a panel header to move it";
-        RenderUtils.textCentered(context, textRenderer, footer, this.width / 2.0F, this.height - 24.0F,
+                : "Left click toggles  -  Right click opens settings  -  Right Shift closes";
+        RenderUtils.textCentered(context, textRenderer, footer, this.width / 2.0F, this.height - 30.0F,
                 ColorUtils.rgba(0xC3D2E0, hoveredModule != null ? 190 : 120), false);
+
+        // Non-intrusive disclaimer pinned to the bottom-left corner.
+        RenderUtils.text(context, textRenderer,
+                "zNova QoL & Visual Utility Mod - for singleplayer & quality-of-life use only.",
+                12.0F, this.height - 20.0F, ColorUtils.rgba(0x8994A3, 130), false);
+        RenderUtils.text(context, textRenderer,
+                "Not a cheat client: no movement, reach or combat automation.",
+                12.0F, this.height - 10.0F, ColorUtils.rgba(0x8994A3, 100), false);
 
         context.getMatrices().popMatrix();
     }
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
-        if (click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        int button = click.button();
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             double mouseX = click.x();
             double mouseY = click.y();
             for (int i = this.panels.size() - 1; i >= 0; i--) {
@@ -112,7 +122,7 @@ public final class ClickGuiScreen extends Screen {
                 if (!panel.isHovered(mouseX, mouseY)) {
                     continue;
                 }
-                if (panel.isOverHeader(mouseX, mouseY)) {
+                if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && panel.isOverHeader(mouseX, mouseY)) {
                     // Raise the clicked panel above the others and start dragging it.
                     this.panels.remove(panel);
                     this.panels.add(panel);
@@ -122,7 +132,7 @@ public final class ClickGuiScreen extends Screen {
                     panel.setDragging(true);
                     return true;
                 }
-                if (panel.mouseClicked(mouseX, mouseY, click.button())) {
+                if (panel.mouseClicked(mouseX, mouseY, button)) {
                     return true;
                 }
             }
@@ -132,12 +142,16 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
+        boolean handled = false;
         if (this.draggingPanel != null) {
             this.draggingPanel.setDragging(false);
             this.draggingPanel = null;
-            return true;
+            handled = true;
         }
-        return super.mouseReleased(click);
+        for (CategoryPanel panel : this.panels) {
+            panel.mouseReleased();
+        }
+        return handled || super.mouseReleased(click);
     }
 
     @Override
@@ -147,17 +161,46 @@ public final class ClickGuiScreen extends Screen {
             this.draggingPanel.clampTo(this.width, this.height);
             return true;
         }
+        for (CategoryPanel panel : this.panels) {
+            if (panel.mouseDragged(click.x(), click.y(), click.button())) {
+                return true;
+            }
+        }
         return super.mouseDragged(click, offsetX, offsetY);
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
         int keyCode = input.getKeycode();
+
+        Module listening = getListeningModule();
+        if (listening != null) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_DELETE) {
+                listening.setKeybind(dev.znova.util.KeyNames.NONE);
+            } else {
+                listening.setKeybind(keyCode);
+            }
+            listening.setListeningForBind(false);
+            return true;
+        }
+
         if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT || keyCode == GLFW.GLFW_KEY_ESCAPE) {
             this.client.setScreen(null);
             return true;
         }
         return super.keyPressed(input);
+    }
+
+    private Module getListeningModule() {
+        if (ZNovaClient.getModuleManager() == null) {
+            return null;
+        }
+        for (Module module : ZNovaClient.getModuleManager().getModules()) {
+            if (module.isListeningForBind()) {
+                return module;
+            }
+        }
+        return null;
     }
 
     @Override

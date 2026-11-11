@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 public final class ZNovaClient implements ClientModInitializer {
     public static final String MOD_ID = "znova";
     public static final String NAME = "zNova";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
     public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
     private static ZNovaClient instance;
@@ -44,6 +44,11 @@ public final class ZNovaClient implements ClientModInitializer {
             if (this.clickGuiKey.wasPressed()) {
                 toggleClickGui(client);
             }
+            if (client.currentScreen == null) {
+                // Leaving the GUI cancels any "Press a key..." prompt.
+                this.moduleManager.clearKeybindListening();
+            }
+            this.moduleManager.handleKeybinds(client);
             this.moduleManager.onTick();
         });
 

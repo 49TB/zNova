@@ -15,11 +15,11 @@ import java.util.List;
 
 /** A draggable glass panel that lists every module of one {@link Category}. */
 public final class CategoryPanel {
-    public static final int WIDTH = 196;
-    public static final int GAP = 16;
+    public static final int WIDTH = 210;
+    public static final int GAP = 14;
     public static final int HEADER_HEIGHT = 32;
     public static final int PADDING = 8;
-    public static final int BUTTON_HEIGHT = 24;
+    public static final int BUTTON_HEIGHT = 22;
     public static final int BUTTON_GAP = 4;
 
     private final Category category;
@@ -63,11 +63,18 @@ public final class CategoryPanel {
         this.dragging = dragging;
     }
 
+    /** Panel height, including any expanded settings cards. */
     public float getHeight() {
-        int contentHeight = this.buttons.isEmpty()
-                ? 18
-                : this.buttons.size() * BUTTON_HEIGHT + (this.buttons.size() - 1) * BUTTON_GAP;
-        return HEADER_HEIGHT + PADDING + contentHeight + PADDING;
+        int content = 0;
+        if (this.buttons.isEmpty()) {
+            content = 18;
+        } else {
+            for (ModuleButton button : this.buttons) {
+                content += button.getHeight();
+            }
+            content += (this.buttons.size() - 1) * BUTTON_GAP;
+        }
+        return HEADER_HEIGHT + PADDING + content + PADDING;
     }
 
     public void clampTo(float screenWidth, float screenHeight) {
@@ -87,12 +94,13 @@ public final class CategoryPanel {
 
     /** @return the module whose row is under the cursor, or {@code null}. */
     public Module getHoveredModule(int mouseX, int mouseY) {
-        for (int i = 0; i < this.buttons.size(); i++) {
-            float buttonY = getContentY() + i * (BUTTON_HEIGHT + BUTTON_GAP);
+        float buttonY = getContentY();
+        for (ModuleButton button : this.buttons) {
             if (mouseX >= this.x + 6 && mouseX < this.x + WIDTH - 6
                     && mouseY >= buttonY && mouseY < buttonY + BUTTON_HEIGHT) {
-                return this.buttons.get(i).getModule();
+                return button.getModule();
             }
+            buttonY += button.getHeight() + BUTTON_GAP;
         }
         return null;
     }
@@ -106,15 +114,31 @@ public final class CategoryPanel {
         if (!isHovered(mouseX, mouseY)) {
             return false;
         }
-        for (int i = 0; i < this.buttons.size(); i++) {
-            float buttonY = getContentY() + i * (BUTTON_HEIGHT + BUTTON_GAP);
-            if (mouseX >= this.x + 6 && mouseX < this.x + WIDTH - 6
-                    && mouseY >= buttonY && mouseY < buttonY + BUTTON_HEIGHT) {
-                this.buttons.get(i).click();
+        float buttonY = getContentY();
+        for (ModuleButton moduleButton : this.buttons) {
+            if (mouseY >= buttonY && mouseY < buttonY + moduleButton.getHeight()) {
+                return moduleButton.mouseClicked(mouseX, mouseY, button,
+                        this.x + 6.0F, buttonY, WIDTH - 12.0F);
+            }
+            buttonY += moduleButton.getHeight() + BUTTON_GAP;
+        }
+        return true;
+    }
+
+    /** Forwards a drag to the settings sliders of every button. */
+    public boolean mouseDragged(double mouseX, double mouseY, int button) {
+        for (ModuleButton moduleButton : this.buttons) {
+            if (moduleButton.mouseDragged(mouseX, mouseY, button)) {
                 return true;
             }
         }
-        return true;
+        return false;
+    }
+
+    public void mouseReleased() {
+        for (ModuleButton moduleButton : this.buttons) {
+            moduleButton.mouseReleased();
+        }
     }
 
     private float getContentY() {
@@ -141,8 +165,7 @@ public final class CategoryPanel {
         RenderUtils.roundedRect(context, panelX + 1.0F, panelY + 1.0F, WIDTH - 2.0F, HEADER_HEIGHT - 8.0F, 11.0F,
                 ColorUtils.scaleAlpha(0x12FFFFFF, alpha));
 
-        context.fill(Math.round(panelX) + 10, Math.round(panelY) + HEADER_HEIGHT - 1,
-                Math.round(panelX) + WIDTH - 10, Math.round(panelY) + HEADER_HEIGHT,
+        RenderUtils.hairline(context, panelX + 10.0F, panelY + HEADER_HEIGHT - 1.0F, WIDTH - 20.0F,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(accent, 90), alpha));
 
         RenderUtils.roundedBorder(context, panelX, panelY, WIDTH, panelHeight, 12.0F, 1.0F,
@@ -171,10 +194,11 @@ public final class CategoryPanel {
         }
 
         float contentY = panelY + HEADER_HEIGHT + PADDING;
-        for (int i = 0; i < this.buttons.size(); i++) {
-            this.buttons.get(i).render(context, textRenderer, panelX + 6.0F,
-                    contentY + i * (BUTTON_HEIGHT + BUTTON_GAP), WIDTH - 12.0F, BUTTON_HEIGHT,
+        for (ModuleButton button : this.buttons) {
+            int buttonHeight = button.getHeight();
+            button.render(context, textRenderer, panelX + 6.0F, contentY, WIDTH - 12.0F, BUTTON_HEIGHT,
                     mouseX, mouseY, alpha);
+            contentY += buttonHeight + BUTTON_GAP;
         }
     }
 }

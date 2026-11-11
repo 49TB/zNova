@@ -3,7 +3,7 @@
   "id": "znova",
   "version": "${version}",
   "name": "zNova",
-  "description": "A sleek, futuristic client-side utility mod: custom neon startup screen, a glassmorphism ClickGUI and clean quality-of-life modules.",
+  "description": "A futuristic client-side QoL and visual utility mod for singleplayer: neon startup screen, glassmorphism ClickGUI with per-module settings and keybinds, HUD array list and clean quality-of-life modules. Strictly for singleplayer and quality-of-life enhancement - not a cheat client.",
   "authors": [
     "zNova"
   ],

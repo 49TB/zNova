@@ -1,9 +1,13 @@
 package dev.znova.module;
 
+import dev.znova.module.modules.ArrayListModule;
 import dev.znova.module.modules.AutoMinerModule;
 import dev.znova.module.modules.FullbrightModule;
 import dev.znova.module.modules.WatermarkModule;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.util.InputUtil;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,6 +25,7 @@ public final class ModuleManager {
             this.byCategory.put(category, new ArrayList<>());
         }
         register(new WatermarkModule());
+        register(new ArrayListModule());
         register(new FullbrightModule());
         register(new AutoMinerModule());
     }
@@ -52,6 +57,35 @@ public final class ModuleManager {
         for (Module module : this.modules) {
             if (module.isEnabled()) {
                 module.onTick();
+            }
+        }
+    }
+
+    /**
+     * Toggles modules whose universal keybind was just pressed.
+     * <p>
+     * Only the press edge counts, and only while no screen is open, so holding a key or
+     * typing in chat never flips a module repeatedly.
+     */
+    public void handleKeybinds(MinecraftClient client) {
+        boolean inGame = client.currentScreen == null;
+        for (Module module : this.modules) {
+            int key = module.getKeybind();
+            boolean down = inGame
+                    && key != GLFW.GLFW_KEY_UNKNOWN
+                    && InputUtil.isKeyPressed(client.getWindow(), key);
+            if (down && !module.wasBoundKeyDown()) {
+                module.toggle();
+            }
+            module.setBoundKeyDown(down);
+        }
+    }
+
+    /** Clears "Press a key..." listening mode, used when the ClickGUI is not open. */
+    public void clearKeybindListening() {
+        for (Module module : this.modules) {
+            if (module.isListeningForBind()) {
+                module.setListeningForBind(false);
             }
         }
     }
