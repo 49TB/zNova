@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "znova",
+  "version": "${version}",
+  "name": "zNova",
+  "description": "A sleek, futuristic client-side utility mod: custom neon startup screen, a glassmorphism ClickGUI and clean quality-of-life modules.",
+  "authors": [
+    "zNova"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.znova.ZNovaClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "znova.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.20.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
