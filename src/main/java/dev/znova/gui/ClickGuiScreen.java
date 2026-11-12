@@ -6,6 +6,7 @@ import dev.znova.module.Category;
 import dev.znova.module.Module;
 import dev.znova.util.Animation;
 import dev.znova.util.ColorUtils;
+import dev.znova.util.KeyNames;
 import dev.znova.util.RenderUtils;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.Click;
@@ -22,10 +23,17 @@ import java.util.List;
  * zNova's ClickGUI: a blurred, dark glass overlay with three draggable category panels.
  * Opened and closed with Right Shift.
  * <p>
- * Left click toggles a module, right click expands its settings card. While a module is
- * waiting for a keybind the screen swallows the next key press: ESC or DELETE unbinds.
+ * Panel positions are restored from {@link PanelLayout} every time the screen opens and
+ * written back when a drag finishes or the GUI closes, so a dragged layout survives both
+ * reopening the GUI and restarting the game. Panel width adapts to the current window so
+ * all three columns fit at any GUI scale.
  */
 public final class ClickGuiScreen extends Screen {
+    private static final int PANEL_GAP = 10;
+    private static final int PANEL_MIN_WIDTH = 120;
+    private static final int PANEL_MAX_WIDTH = CategoryPanel.DEFAULT_WIDTH;
+    private static final int SCREEN_INSET = 8;
+
     private final List<CategoryPanel> panels = new ArrayList<>();
     private final Animation intro = new Animation(14.0F, 0.0F);
 
@@ -39,25 +47,46 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     protected void init() {
+        PanelLayout.load();
+
+        int panelWidth = computePanelWidth();
         if (this.panels.isEmpty()) {
             Category[] categories = Category.values();
-            int totalWidth = categories.length * CategoryPanel.WIDTH + (categories.length - 1) * CategoryPanel.GAP;
-            int startX = Math.max(10, (this.width - totalWidth) / 2);
-            int startY = Math.max(56, (this.height - 230) / 2);
+            int totalWidth = categories.length * panelWidth + (categories.length - 1) * PANEL_GAP;
+            int startX = Math.max(SCREEN_INSET, (this.width - totalWidth) / 2);
+            int startY = Math.max(44, (this.height - 200) / 2);
 
             for (int i = 0; i < categories.length; i++) {
-                CategoryPanel panel = new CategoryPanel(categories[i],
-                        startX + i * (CategoryPanel.WIDTH + CategoryPanel.GAP), startY);
+                Category category = categories[i];
+                float panelX = PanelLayout.has(category) ? PanelLayout.getX(category) : startX + i * (panelWidth + PANEL_GAP);
+                float panelY = PanelLayout.has(category) ? PanelLayout.getY(category) : startY;
+                CategoryPanel panel = new CategoryPanel(category, panelWidth, panelX, panelY);
                 panel.clampTo(this.width, this.height);
                 this.panels.add(panel);
             }
             this.intro.snapTo(0.0F);
         } else {
             for (CategoryPanel panel : this.panels) {
+                panel.setWidth(panelWidth);
                 panel.clampTo(this.width, this.height);
             }
         }
         this.intro.setTarget(1.0F);
+    }
+
+    /** Width that keeps all three panels on screen at the current GUI scale. */
+    private int computePanelWidth() {
+        int count = Category.values().length;
+        int available = this.width - SCREEN_INSET * 2 - (count - 1) * PANEL_GAP;
+        int perPanel = available / count;
+        return Math.max(PANEL_MIN_WIDTH, Math.min(PANEL_MAX_WIDTH, perPanel));
+    }
+
+    private void persistPanels() {
+        for (CategoryPanel panel : this.panels) {
+            PanelLayout.setPosition(panel.getCategory(), panel.getX(), panel.getY());
+        }
+        PanelLayout.save();
     }
 
     @Override
@@ -72,14 +101,14 @@ public final class ClickGuiScreen extends Screen {
         context.getMatrices().pushMatrix();
         context.getMatrices().translate(this.width / 2.0F, this.height / 2.0F);
         context.getMatrices().scale(0.97F + 0.03F * eased, 0.97F + 0.03F * eased);
-        context.getMatrices().translate(-this.width / 2.0F, -this.height / 2.0F + (1.0F - eased) * 12.0F);
+        context.getMatrices().translate(-this.width / 2.0F, -this.height / 2.0F + (1.0F - eased) * 10.0F);
 
-        RenderUtils.glowTextScaled(context, textRenderer, "zNova", this.width / 2.0F, 12.0F, 2.0F,
+        RenderUtils.glowTextScaled(context, textRenderer, "zNova", this.width / 2.0F, 8.0F, 1.5F,
                 ColorUtils.rgba(ColorUtils.CYAN, 30), 0xFFF2FBFF);
 
         String subtitle = "UTILITY CLIENT";
         RenderUtils.spacedText(context, textRenderer, subtitle,
-                this.width / 2.0F - RenderUtils.spacedWidth(textRenderer, subtitle, 2) / 2.0F, 30.0F, 2,
+                this.width / 2.0F - RenderUtils.spacedWidth(textRenderer, subtitle, 2) / 2.0F, 24.0F, 2,
                 ColorUtils.rgba(ColorUtils.CYAN, 130), false);
 
         for (CategoryPanel panel : this.panels) {
@@ -146,6 +175,7 @@ public final class ClickGuiScreen extends Screen {
         if (this.draggingPanel != null) {
             this.draggingPanel.setDragging(false);
             this.draggingPanel = null;
+            persistPanels();
             handled = true;
         }
         for (CategoryPanel panel : this.panels) {
@@ -176,7 +206,7 @@ public final class ClickGuiScreen extends Screen {
         Module listening = getListeningModule();
         if (listening != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_DELETE) {
-                listening.setKeybind(dev.znova.util.KeyNames.NONE);
+                listening.setKeybind(KeyNames.NONE);
             } else {
                 listening.setKeybind(keyCode);
             }
@@ -185,6 +215,7 @@ public final class ClickGuiScreen extends Screen {
         }
 
         if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT || keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            persistPanels();
             this.client.setScreen(null);
             return true;
         }

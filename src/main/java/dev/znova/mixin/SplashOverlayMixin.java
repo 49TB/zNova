@@ -82,7 +82,7 @@ public abstract class SplashOverlayMixin {
                 ColorUtils.scaleAlpha(ColorUtils.rgba(ColorUtils.CYAN, 220), fade),
                 ColorUtils.scaleAlpha(ColorUtils.rgba(ColorUtils.VIOLET, 0), fade));
 
-        String tagline = "FUTURISTIC UTILITY CLIENT";
+        String tagline = "UTILITY CLIENT";
         RenderUtils.spacedText(context, textRenderer, tagline,
                 screenWidth / 2.0F - RenderUtils.spacedWidth(textRenderer, tagline, 3) / 2.0F, wordmarkY + 52.0F, 3,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(0xA9B6C6, 200), fade), false);

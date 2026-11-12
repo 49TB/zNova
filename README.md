@@ -13,13 +13,15 @@ list and a small set of clean utility modules.
 | Feature | Description |
 | --- | --- |
 | Custom splash | `#0A0A0F` backdrop, animated cyan/violet loading bar driven by the real resource-reload progress |
-| ClickGUI (`Right Shift`) | Blurred dark glass, three draggable panels (Misc / Render / QoL), animated hovers and glowing toggles |
+| ClickGUI (`Right Shift`) | Blurred dark glass, three compact draggable panels (Misc / Render / QoL) that resize to the window and remember their positions |
 | Inline settings | Right-click any module for a dropdown card with its keybind and module-specific settings |
 | Universal keybinds | Every module can be bound to a key from its settings card; `ESC` / `DELETE` clears the bind |
 | Watermark (Render, on by default) | Top-left badge with the client name, optional live FPS and optional coordinates |
 | ArrayList (Render) | Top-right (or bottom-right) list of enabled modules, sorted by width, with slide-in/fade and cyan accent bars |
 | Fullbright (Render) | Client-side Night Vision plus a draggable brightness (gamma) slider |
 | AutoMiner (QoL) | Holds the attack key while a pickaxe is in the main hand, optionally only when the crosshair is on a block |
+| AutoWalk (QoL) | Holds the forward key, optionally sprinting as well |
+| AutoJump (QoL) | Holds the jump key while no screen is open |
 
 ## Module settings
 
@@ -28,6 +30,8 @@ list and a small set of clean utility modules.
 - **Watermark** — `Show FPS`, `Show Coordinates`.
 - **ArrayList** — `Show Keybinds`, `Position` (`Top-Right` / `Bottom-Right`).
 - **AutoMiner** — `Only When Looking At Block`.
+- **AutoWalk** — `Sprint` (also holds the sprint key while walking).
+- **AutoJump** — no extra settings.
 - **Every module** — `Keybind` (click the chip, press a key; `ESC` or `DELETE` unbinds;
   pressing the bound key in-game toggles the module).
 
@@ -67,7 +71,7 @@ gradle wrapper
 # Windows: gradlew.bat build
 ```
 
-The jar lands in `build/libs/znova-1.1.0.jar`. Drop it into `.minecraft/mods` together with
+The jar lands in `build/libs/znova-1.2.0.jar`. Drop it into `.minecraft/mods` together with
 **Fabric Loader 0.20+** and **Fabric API 0.141.6+1.21.11**.
 
 ## Source layout
@@ -80,8 +84,9 @@ src/main/java/dev/znova/
   module/ModuleManager.java            registry, keybind dispatch, HUD fan-out
   module/Category.java                 Misc / Render / QoL
   module/setting/*.java                Boolean, slider and mode settings
-  module/modules/*.java                Watermark, ArrayList, Fullbright, AutoMiner
+  module/modules/*.java                Watermark, ArrayList, Fullbright, AutoMiner, AutoWalk, AutoJump
   gui/ClickGuiScreen.java              Right Shift ClickGUI + keybind capture
+  gui/PanelLayout.java                 saved panel positions (config/znova-panels.json)
   gui/widget/CategoryPanel.java        draggable glass panel
   gui/widget/ModuleButton.java         module row + inline settings card
   util/RenderUtils.java                crisp rounded shapes, glow, gradients, typography

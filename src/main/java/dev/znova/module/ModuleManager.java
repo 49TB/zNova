@@ -1,7 +1,9 @@
 package dev.znova.module;
 
 import dev.znova.module.modules.ArrayListModule;
+import dev.znova.module.modules.AutoJumpModule;
 import dev.znova.module.modules.AutoMinerModule;
+import dev.znova.module.modules.AutoWalkModule;
 import dev.znova.module.modules.FullbrightModule;
 import dev.znova.module.modules.WatermarkModule;
 import net.minecraft.client.MinecraftClient;
@@ -28,6 +30,8 @@ public final class ModuleManager {
         register(new ArrayListModule());
         register(new FullbrightModule());
         register(new AutoMinerModule());
+        register(new AutoWalkModule());
+        register(new AutoJumpModule());
     }
 
     private void register(Module module) {

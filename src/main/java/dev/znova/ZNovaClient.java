@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 public final class ZNovaClient implements ClientModInitializer {
     public static final String MOD_ID = "znova";
     public static final String NAME = "zNova";
-    public static final String VERSION = "1.1.0";
+    public static final String VERSION = "1.2.0";
     public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
     private static ZNovaClient instance;

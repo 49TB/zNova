@@ -13,26 +13,32 @@ import net.minecraft.util.math.MathHelper;
 import java.util.ArrayList;
 import java.util.List;
 
-/** A draggable glass panel that lists every module of one {@link Category}. */
+/**
+ * A draggable glass panel that lists every module of one {@link Category}.
+ * <p>
+ * The width is supplied by the screen so the three panels always fit whatever GUI scale
+ * and resolution the player uses, while the header and rows stay compact.
+ */
 public final class CategoryPanel {
-    public static final int WIDTH = 210;
-    public static final int GAP = 14;
-    public static final int HEADER_HEIGHT = 32;
-    public static final int PADDING = 8;
-    public static final int BUTTON_HEIGHT = 22;
-    public static final int BUTTON_GAP = 4;
+    public static final int DEFAULT_WIDTH = 172;
+    public static final int HEADER_HEIGHT = 24;
+    public static final int PADDING = 6;
+    public static final int BUTTON_HEIGHT = 17;
+    public static final int BUTTON_GAP = 3;
 
     private final Category category;
     private final List<ModuleButton> buttons = new ArrayList<>();
     private final Animation hover = new Animation(14.0F);
     private final Animation lift = new Animation(16.0F);
 
+    private int width;
     private float x;
     private float y;
     private boolean dragging;
 
-    public CategoryPanel(Category category, float x, float y) {
+    public CategoryPanel(Category category, int width, float x, float y) {
         this.category = category;
+        this.width = width;
         this.x = x;
         this.y = y;
         if (ZNovaClient.getModuleManager() != null) {
@@ -48,6 +54,14 @@ public final class CategoryPanel {
 
     public float getY() {
         return this.y;
+    }
+
+    public int getWidth() {
+        return this.width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
     }
 
     public Category getCategory() {
@@ -67,7 +81,7 @@ public final class CategoryPanel {
     public float getHeight() {
         int content = 0;
         if (this.buttons.isEmpty()) {
-            content = 18;
+            content = 16;
         } else {
             for (ModuleButton button : this.buttons) {
                 content += button.getHeight();
@@ -77,18 +91,24 @@ public final class CategoryPanel {
         return HEADER_HEIGHT + PADDING + content + PADDING;
     }
 
+    /**
+     * Keeps the whole panel on screen: the header can never be dragged past an edge, so a
+     * panel always stays reachable even after a resolution or GUI scale change.
+     */
     public void clampTo(float screenWidth, float screenHeight) {
-        this.x = MathHelper.clamp(this.x, 4.0F, Math.max(4.0F, screenWidth - WIDTH - 4.0F));
-        this.y = MathHelper.clamp(this.y, 4.0F, Math.max(4.0F, screenHeight - getHeight() - 4.0F));
+        float maxX = Math.max(2.0F, screenWidth - this.width - 2.0F);
+        float maxY = Math.max(2.0F, screenHeight - HEADER_HEIGHT - 2.0F);
+        this.x = MathHelper.clamp(this.x, 2.0F, maxX);
+        this.y = MathHelper.clamp(this.y, 2.0F, maxY);
     }
 
     public boolean isHovered(double mouseX, double mouseY) {
-        return mouseX >= this.x && mouseX < this.x + WIDTH
+        return mouseX >= this.x && mouseX < this.x + this.width
                 && mouseY >= this.y && mouseY < this.y + getHeight();
     }
 
     public boolean isOverHeader(double mouseX, double mouseY) {
-        return mouseX >= this.x && mouseX < this.x + WIDTH
+        return mouseX >= this.x && mouseX < this.x + this.width
                 && mouseY >= this.y && mouseY < this.y + HEADER_HEIGHT;
     }
 
@@ -96,7 +116,7 @@ public final class CategoryPanel {
     public Module getHoveredModule(int mouseX, int mouseY) {
         float buttonY = getContentY();
         for (ModuleButton button : this.buttons) {
-            if (mouseX >= this.x + 6 && mouseX < this.x + WIDTH - 6
+            if (mouseX >= this.x + 4 && mouseX < this.x + this.width - 4
                     && mouseY >= buttonY && mouseY < buttonY + BUTTON_HEIGHT) {
                 return button.getModule();
             }
@@ -118,7 +138,7 @@ public final class CategoryPanel {
         for (ModuleButton moduleButton : this.buttons) {
             if (mouseY >= buttonY && mouseY < buttonY + moduleButton.getHeight()) {
                 return moduleButton.mouseClicked(mouseX, mouseY, button,
-                        this.x + 6.0F, buttonY, WIDTH - 12.0F);
+                        this.x + 4.0F, buttonY, this.width - 8.0F);
             }
             buttonY += moduleButton.getHeight() + BUTTON_GAP;
         }
@@ -157,23 +177,23 @@ public final class CategoryPanel {
         float panelHeight = getHeight();
         int accent = this.category.getAccentColor();
 
-        RenderUtils.glow(context, panelX, panelY, WIDTH, panelHeight, 12.0F,
+        RenderUtils.glow(context, panelX, panelY, this.width, panelHeight, 10.0F,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(accent, Math.round(22.0F + 34.0F * hoverAmount)), alpha), 5, 4.0F);
 
-        RenderUtils.roundedRect(context, panelX, panelY, WIDTH, panelHeight, 12.0F,
+        RenderUtils.roundedRect(context, panelX, panelY, this.width, panelHeight, 10.0F,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(ColorUtils.PANEL, 217), alpha));
-        RenderUtils.roundedRect(context, panelX + 1.0F, panelY + 1.0F, WIDTH - 2.0F, HEADER_HEIGHT - 8.0F, 11.0F,
+        RenderUtils.roundedRect(context, panelX + 1.0F, panelY + 1.0F, this.width - 2.0F, HEADER_HEIGHT - 7.0F, 9.0F,
                 ColorUtils.scaleAlpha(0x12FFFFFF, alpha));
 
-        RenderUtils.hairline(context, panelX + 10.0F, panelY + HEADER_HEIGHT - 1.0F, WIDTH - 20.0F,
+        RenderUtils.hairline(context, panelX + 8.0F, panelY + HEADER_HEIGHT - 1.0F, this.width - 16.0F,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(accent, 90), alpha));
 
-        RenderUtils.roundedBorder(context, panelX, panelY, WIDTH, panelHeight, 12.0F, 1.0F,
+        RenderUtils.roundedBorder(context, panelX, panelY, this.width, panelHeight, 10.0F, 1.0F,
                 ColorUtils.scaleAlpha(ColorUtils.lerp(ColorUtils.rgba(accent, 55), ColorUtils.rgba(accent, 150), hoverAmount), alpha));
 
-        RenderUtils.text(context, textRenderer, this.category.getDisplayName(), panelX + 12.0F, panelY + 10.0F,
+        RenderUtils.text(context, textRenderer, this.category.getDisplayName(), panelX + 9.0F, panelY + 6.0F,
                 ColorUtils.scaleAlpha(0xFFF2FBFF, alpha), false);
-        RenderUtils.roundedRect(context, panelX + 12.0F, panelY + 22.0F, 16.0F, 1.5F, 0.75F,
+        RenderUtils.roundedRect(context, panelX + 9.0F, panelY + 16.0F, 14.0F, 1.5F, 0.75F,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(accent, 200), alpha));
 
         int enabledCount = 0;
@@ -184,11 +204,11 @@ public final class CategoryPanel {
         }
         String counter = enabledCount + "/" + this.buttons.size();
         RenderUtils.text(context, textRenderer, counter,
-                panelX + WIDTH - 12.0F - textRenderer.getWidth(counter), panelY + 10.0F,
+                panelX + this.width - 9.0F - textRenderer.getWidth(counter), panelY + 6.0F,
                 ColorUtils.scaleAlpha(ColorUtils.rgba(accent, 170), alpha), false);
 
         if (this.buttons.isEmpty()) {
-            RenderUtils.text(context, textRenderer, "No modules yet", panelX + 12.0F, panelY + HEADER_HEIGHT + PADDING + 4.0F,
+            RenderUtils.text(context, textRenderer, "No modules yet", panelX + 9.0F, panelY + HEADER_HEIGHT + PADDING + 4.0F,
                     ColorUtils.scaleAlpha(0xFF6C7787, alpha), false);
             return;
         }
@@ -196,7 +216,7 @@ public final class CategoryPanel {
         float contentY = panelY + HEADER_HEIGHT + PADDING;
         for (ModuleButton button : this.buttons) {
             int buttonHeight = button.getHeight();
-            button.render(context, textRenderer, panelX + 6.0F, contentY, WIDTH - 12.0F, BUTTON_HEIGHT,
+            button.render(context, textRenderer, panelX + 4.0F, contentY, this.width - 8.0F, BUTTON_HEIGHT,
                     mouseX, mouseY, alpha);
             contentY += buttonHeight + BUTTON_GAP;
         }
